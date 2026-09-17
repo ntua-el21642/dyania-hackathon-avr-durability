@@ -1,0 +1,28 @@
+R: 50
+n_per_replicate: 99
+mean_events_per_replicate: 6.58
+mean_n_divergences: 9.16
+mean_max_rhat: 1.0051540726675219
+mean_c_index: 0.6243070948610329
+shape_k:
+  true_value: 3.5
+  mean_bias: -0.7878979226404352
+  coverage_80pct_ci: 0.56
+  coverage_95pct_ci: 0.8
+  mean_posterior_mean: 2.7121020773595657
+mu_approach_SAVR:
+  true_value: 2.70805020110221
+  mean_bias: 0.3492553288676025
+  coverage_80pct_ci: 0.48
+  coverage_95pct_ci: 0.88
+  mean_posterior_mean: 3.0573055299698124
+mu_approach_TAVR:
+  true_value: 2.995732273553991
+  mean_bias: 0.06614548242785383
+  coverage_80pct_ci: 1.0
+  coverage_95pct_ci: 1.0
+  mean_posterior_mean: 3.061877755981845
+tau_family_mean_estimate: 0.34427878199026696
+tau_family_note: True family heterogeneity is 0 in this simulation; a low estimated
+  tau_family here indicates the model correctly avoids overfitting spurious family
+  differences.

@@ -1,0 +1,4 @@
+approach,shape_k,scale_lambda_years,source
+SAVR,1.3989001189112638,43.841358519784926,"literature prior only, no data update"
+TAVR,3.32798109968122,19.91955954670536,"literature prior only, no data update"
+ViV-TAVR,3.32798109968122,19.91955954670536,"literature prior only, no data update"

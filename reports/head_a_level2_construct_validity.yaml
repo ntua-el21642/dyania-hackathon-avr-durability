@@ -1,0 +1,111 @@
+age:
+  checkable: false
+  reason: Age at implant is masked ([AGE]) throughout the corpus with zero surviving
+    numeric values (verified by full-corpus regex scan, see build_features.py). The
+    literature's 'younger age -> higher SVD' association cannot be tested against
+    this cohort at all.
+labelled_size:
+  n_event: 4
+  n_censored: 54
+  mean_event: 25.0
+  mean_censored: 24.537037037037038
+  welch_t: 0.5081715149927114
+  welch_p: 0.6345830251509582
+  mannwhitney_p: 0.8155189709830928
+  replicated: false
+valve_family:
+  family_table:
+    carpentier_edwards_savr_pericardial:
+      n: 10
+      events: 2
+      rate: 0.2
+    corevalve_evolut_tavr_self_expanding:
+      n: 3
+      events: 0
+      rate: 0.0
+    sapien_family_tavr_balloon:
+      n: 24
+      events: 0
+      rate: 0.0
+  model_table:
+    Biocor:
+      n: 2
+      events: 2
+      rate: 1.0
+      mean_followup_years: 14.5
+    Evolut:
+      n: 2
+      events: 0
+      rate: 0.0
+      mean_followup_years: 4.0
+    Evolut PRO:
+      n: 1
+      events: 0
+      rate: 0.0
+      mean_followup_years: 0.0
+    Inspiris:
+      n: 1
+      events: 0
+      rate: 0.0
+      mean_followup_years: 0.0
+    Inspiris Resilia:
+      n: 1
+      events: 0
+      rate: 0.0
+      mean_followup_years: 0.0
+    Magna:
+      n: 3
+      events: 1
+      rate: 0.3333333333333333
+      mean_followup_years: 7.0
+    Perimount:
+      n: 4
+      events: 0
+      rate: 0.0
+      mean_followup_years: 3.75
+    Perimount 2700:
+      n: 1
+      events: 1
+      rate: 1.0
+      mean_followup_years: 6.0
+    Sapien:
+      n: 4
+      events: 0
+      rate: 0.0
+      mean_followup_years: 0.0
+    Sapien S3:
+      n: 20
+      events: 0
+      rate: 0.0
+      mean_followup_years: 1.0
+    Trifecta:
+      n: 18
+      events: 1
+      rate: 0.05555555555555555
+      mean_followup_years: 3.6666666666666665
+    Trifecta GT:
+      n: 7
+      events: 1
+      rate: 0.14285714285714285
+      mean_followup_years: 3.2857142857142856
+  trifecta_raw_rate: 0.0992063492063492
+  trifecta_mean_followup_years: 3.4761904761904763
+  other_models_mean_followup_years: 6.041666666666667
+  interpretation: Trifecta/Trifecta GT's own raw event rate (5.6%/14.3%) is NOT higher
+    than Biocor (100%, n=2) or Magna (33%, n=3) in this cohort's raw numbers, which
+    on its face does not reproduce the literature's Trifecta early-SVD signal. But
+    Trifecta/Trifecta GT patients have a much shorter mean observed follow-up (~3.5y)
+    than Biocor/Magna (7-14.5y) in this cohort -- consistent with Trifecta being a
+    newer device with less elapsed implant-to-now time in this specific snapshot,
+    not necessarily lower true risk. Combined with the clean 'no SVD before 5 years'
+    finding below (all 11 events occurred at 5-15 years post-implant), most of this
+    cohort's Trifecta patients (mean follow-up 3.5y) have not yet reached the window
+    where SVD would typically appear. This is a CONFOUNDED comparison, not a clean
+    replication or refutation -- reported as such, not smoothed into either direction.
+early_svd_rarity:
+  n_savr_events: 8
+  n_before_5y: 0
+  min_years: 6.0
+  median_years: 12.0
+  max_years: 15.0
+  replicated: true

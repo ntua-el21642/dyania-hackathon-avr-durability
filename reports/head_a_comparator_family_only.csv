@@ -1,0 +1,4 @@
+valve_family,n,n_events,shape_k,scale_lambda_years,note
+carpentier_edwards_savr_pericardial,10,2,3.343917632261611,13.475808562010574,
+corevalve_evolut_tavr_self_expanding,3,0,,,"no events in this family -- MLE undefined, prior-only recommended"
+sapien_family_tavr_balloon,24,0,,,"no events in this family -- MLE undefined, prior-only recommended"

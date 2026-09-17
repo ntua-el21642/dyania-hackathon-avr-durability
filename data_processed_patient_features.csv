@@ -1,0 +1,100 @@
+profile_key,index_implant_year,index_implant_source,index_approach,index_valve_model,valve_family,valve_family_known,index_valve_size_mm,size_known,ppm_proxy_flag
+Patient_001,2022.0,op_report_service_date,SAVR,Perimount,carpentier_edwards_savr_pericardial,True,25.0,True,False
+Patient_003,2014.0,op_report_service_date,SAVR,Magna,carpentier_edwards_savr_pericardial,True,21.0,True,True
+Patient_004,2021.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,26.0,True,False
+Patient_005,2011.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_006,2017.0,op_report_service_date,SAVR,Trifecta,,False,21.0,True,True
+Patient_007,2012.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_009,2015.0,op_report_service_date,SAVR,Trifecta,,False,21.0,True,True
+Patient_010,2022.0,op_report_service_date,ViV-TAVR,Evolut,corevalve_evolut_tavr_self_expanding,True,,False,False
+Patient_011,2017.0,op_report_service_date,SAVR,Trifecta,,False,21.0,True,True
+Patient_013,2020.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,29.0,True,False
+Patient_014,2014.0,op_report_service_date,SAVR,Trifecta,,False,29.0,True,False
+Patient_015,2016.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_016,2021.0,op_report_service_date,ViV-TAVR,Sapien S3,sapien_family_tavr_balloon,True,26.0,True,False
+Patient_017,2014.0,op_report_service_date,SAVR,Trifecta,,False,23.0,True,False
+Patient_018,2013.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_019,2022.0,op_report_service_date,ViV-TAVR,Evolut,corevalve_evolut_tavr_self_expanding,True,,False,False
+Patient_020,2013.0,op_report_service_date,SAVR,Trifecta,,False,19.0,True,True
+Patient_021,2006.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_022,2017.0,op_report_service_date,SAVR,Trifecta,,False,21.0,True,True
+Patient_023,2013.0,op_report_service_date,TAVR,Sapien,sapien_family_tavr_balloon,True,23.0,True,False
+Patient_024,2016.0,op_report_service_date,SAVR,Trifecta GT,,False,27.0,True,False
+Patient_025,2014.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_026,2019.0,op_report_service_date,SAVR,Inspiris Resilia,carpentier_edwards_savr_pericardial,True,27.0,True,False
+Patient_027,2021.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,29.0,True,False
+Patient_028,2013.0,op_report_service_date,SAVR,Trifecta,,False,,False,False
+Patient_029,2020.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_030,2011.0,op_report_service_date,SAVR,Trifecta,,False,27.0,True,False
+Patient_031,2016.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,26.0,True,False
+Patient_032,2013.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_033,2021.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,23.0,True,False
+Patient_034,2020.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,23.0,True,False
+Patient_035,2010.0,op_report_service_date,SAVR,Biocor,,False,,False,False
+Patient_036,2009.0,op_report_service_date,SAVR,Biocor,,False,,False,False
+Patient_037,2018.0,op_report_service_date,TAVR,,,False,,False,False
+Patient_038,2018.0,op_report_service_date,SAVR,Perimount 2700,carpentier_edwards_savr_pericardial,True,25.0,True,False
+Patient_039,2013.0,op_report_service_date,SAVR,Trifecta,,False,25.0,True,False
+Patient_040,2018.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_041,2021.0,op_report_service_date,TAVR,,,False,,False,False
+Patient_042,2016.0,op_report_service_date,SAVR,Trifecta GT,,False,25.0,True,False
+Patient_043,2018.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,20.0,True,True
+Patient_044,2010.0,op_report_service_date,SAVR,Magna,carpentier_edwards_savr_pericardial,True,25.0,True,False
+Patient_045,2019.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,29.0,True,False
+Patient_046,2018.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,26.0,True,False
+Patient_047,2021.0,op_report_service_date,TAVR,,,False,,False,False
+Patient_048,2010.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_049,2022.0,op_report_service_date,ViV-TAVR,Sapien S3,sapien_family_tavr_balloon,True,23.0,True,False
+Patient_050,2021.0,op_report_service_date,TAVR,,,False,,False,False
+Patient_051,2021.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,23.0,True,False
+Patient_052,2021.0,op_report_service_date,ViV-TAVR,Sapien S3,sapien_family_tavr_balloon,True,26.0,True,False
+Patient_053,2017.0,op_report_service_date,SAVR,Trifecta,,False,19.0,True,True
+Patient_054,2011.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_055,2016.0,op_report_service_date,SAVR,Trifecta GT,,False,25.0,True,False
+Patient_056,2019.0,op_report_service_date,TAVR,Evolut PRO,corevalve_evolut_tavr_self_expanding,True,26.0,True,False
+Patient_058,2016.0,op_report_service_date,SAVR,Trifecta GT,,False,27.0,True,False
+Patient_059,2017.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_060,2018.0,narrative_mention,TAVR,,,False,,False,False
+Patient_061,2015.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_062,2017.0,op_report_service_date,SAVR,Trifecta GT,,False,23.0,True,False
+Patient_063,2021.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,26.0,True,False
+Patient_064,2016.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,23.0,True,False
+Patient_065,2015.0,op_report_service_date,TAVR,Sapien,sapien_family_tavr_balloon,True,29.0,True,False
+Patient_066,2011.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_067,2014.0,op_report_service_date,SAVR,Trifecta,,False,19.0,True,True
+Patient_068,2012.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_069,2016.0,op_report_service_date,SAVR,Trifecta,,False,25.0,True,False
+Patient_070,2021.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,26.0,True,False
+Patient_071,2013.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_072,2015.0,op_report_service_date,TAVR,,,False,,False,False
+Patient_073,2015.0,op_report_service_date,TAVR,,,False,,False,False
+Patient_074,2018.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,29.0,True,False
+Patient_075,2020.0,op_report_service_date,SAVR,Inspiris,carpentier_edwards_savr_pericardial,True,23.0,True,False
+Patient_076,2020.0,narrative_mention,TAVR,,,False,,False,False
+Patient_077,2014.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_078,2021.0,op_report_service_date,ViV-TAVR,Sapien S3,sapien_family_tavr_balloon,True,26.0,True,False
+Patient_079,2010.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_081,2012.0,op_report_service_date,SAVR,Perimount,carpentier_edwards_savr_pericardial,True,23.0,True,False
+Patient_082,2016.0,op_report_service_date,SAVR,Trifecta GT,,False,27.0,True,False
+Patient_083,2017.0,op_report_service_date,SAVR,Trifecta,,False,21.0,True,True
+Patient_084,2021.0,op_report_service_date,TAVR,,,False,,False,False
+Patient_085,2019.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,29.0,True,False
+Patient_086,2016.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_087,2020.0,op_report_service_date,TAVR,Sapien S3,sapien_family_tavr_balloon,True,26.0,True,False
+Patient_088,2012.0,op_report_service_date,SAVR,Magna,carpentier_edwards_savr_pericardial,True,23.0,True,False
+Patient_089,2016.0,op_report_service_date,SAVR,Trifecta,,False,21.0,True,True
+Patient_090,2016.0,op_report_service_date,SAVR,Perimount,carpentier_edwards_savr_pericardial,True,25.0,True,False
+Patient_091,2017.0,op_report_service_date,SAVR,Trifecta GT,,False,23.0,True,False
+Patient_092,2018.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_093,2017.0,op_report_service_date,SAVR,Trifecta,,False,,False,False
+Patient_094,2014.0,op_report_service_date,SAVR,Perimount,carpentier_edwards_savr_pericardial,True,25.0,True,False
+Patient_095,2015.0,op_report_service_date,TAVR,Sapien,sapien_family_tavr_balloon,True,29.0,True,False
+Patient_096,2014.0,op_report_service_date,TAVR,Sapien,sapien_family_tavr_balloon,True,29.0,True,False
+Patient_097,2015.0,op_report_service_date,SAVR,,,False,,False,False
+Patient_098,2014.0,op_report_service_date,TAVR,,,False,,False,False
+Patient_099,2015.0,op_report_service_date,SAVR,Trifecta,,False,23.0,True,False
+Patient_100,2014.0,op_report_service_date,SAVR,Trifecta,,False,21.0,True,True
+Patient_103,2019.0,narrative_mention,SAVR,,,False,,False,False
+Patient_106,2015.0,narrative_mention,SAVR,,,False,,False,False
+Patient_114,2012.0,narrative_mention,SAVR,,,False,,False,False
+Patient_117,2013.0,narrative_mention,SAVR,,,False,,False,False

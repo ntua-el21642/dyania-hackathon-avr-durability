@@ -164,8 +164,10 @@ def assign_patient_label(evidence: dict) -> dict:
     baseline = evidence.get("baseline_gradient")
     followups = evidence.get("followup_gradients") or []
     stage_from_hemo, hemo_conf, hemo_reason = 0, None, None
+    worst_followup_mg = None
     if followups:
         worst = max(followups, key=lambda g: g.get("mean") or 0)
+        worst_followup_mg = worst.get("mean")
         if baseline and baseline.get("mean") is not None:
             stage, reason = classify_hvd_stage_from_gradients(
                 baseline["mean"], worst.get("mean"),
@@ -218,8 +220,34 @@ def assign_patient_label(evidence: dict) -> dict:
         out["hvd_stage"] = max(out["hvd_stage"], 1)
         rationale.append(f"Possible/Stage-1 qualitative gradient worsening (no numeric value to stage): {evidence.get('gradient_trend_evidence')}")
 
+    # --- Possible tier: SVD-language phrase found only as a bare coded
+    # problem-list entry (e.g. "Prosthetic aortic valve failure" on its own
+    # line in a Diagnosis/Date table), with no narrative elaboration and no
+    # way to confirm SVD vs. PVL/endocarditis/thrombosis etiology from the
+    # phrase alone (see review/error_catalogue.md, finding 3.2). Never
+    # promoted to 'definite' — a human must adjudicate the true cause.
+    if out["confidence_tier"] not in ("definite", "probable", "possible") and evidence.get("has_svd_history_list_only"):
+        out["confidence_tier"] = "possible"
+        out["hvd_stage"] = max(out["hvd_stage"], 1)
+        rationale.append(f"Possible/coded-history-only SVD phrase (etiology unconfirmed, no narrative elaboration): {evidence.get('svd_history_list_evidence')}")
+
+    # NOTE: has_stenosis_evidence must reflect an ACTUAL stenotic gradient
+    # (worst_followup_mg at/above the Capodanno moderate threshold, or a
+    # VARC-3-strict stenosis stage), not merely "a followup gradient value
+    # exists" (bool(followups)) and not stage_from_hemo (which, via the
+    # Capodanno-fallback path, is max(MG-driven stage, AR-driven stage) and
+    # so can be >0 from AR alone with a normal MG). An earlier version used
+    # bool(followups) and mislabeled several AR-only-driven patients (e.g.
+    # worst_followup_mg=3-9 mmHg alongside a real AR finding) as phenotype
+    # "RS" instead of "R" — caught by the Head B unit tests
+    # (tests/test_varc3_rules.py), fixed here.
+    has_stenosis_evidence = (
+        (worst_followup_mg is not None and worst_followup_mg >= CAPODANNO_MODERATE_MG)
+        or bool(evidence.get("has_morphology_only"))
+        or bool(evidence.get("has_gradient_trend_only"))
+    )
     out["phenotype"] = stage_phenotype_note(
-        has_stenosis_evidence=bool(followups) or evidence.get("has_morphology_only") or evidence.get("has_gradient_trend_only"),
+        has_stenosis_evidence=has_stenosis_evidence,
         has_regurg_evidence=bool(evidence.get("max_ar_ordinal")),
     )
     out["rationale"] = rationale if rationale else ["No post-implant HVD/SVD evidence found; right-censored"]

@@ -1,0 +1,117 @@
+# Manual label overrides applied AFTER the deterministic VARC-3 rule engine
+# (varc3_rules.assign_patient_label), documented here rather than hand-
+# edited into labels.csv so they survive a pipeline re-run and are
+# auditable. Applied by pipeline.apply_label_overrides().
+#
+# STATUS (2026-09-17, final): physician sign-off received on all four
+# patients that were flagged pending_physician_reconfirmation
+# (058, 061, 068, 081). This is now the FINAL, confirmed reconciliation --
+# not provisional. Resolution was asymmetric, not a blanket acceptance of
+# either side:
+#   - 058, 061, 068: physician confirmed the PIPELINE's original evidence-
+#     based read was correct (definite BVF Stage 2). No override needed --
+#     removed from the override file entirely; the deterministic engine's
+#     own output already stands as the confirmed value.
+#   - 081: physician confirmed their OWN original read was correct, not
+#     the pipeline's -- this is a genuine pipeline over-call, not a
+#     disagreement pending resolution. See physician_confirmed_overrides
+#     below and the "known extractor gap" note.
+#   - 077: unaffected by this round (already resolved as a confirmed
+#     correction in the previous pass -- kept below unchanged).
+#
+# Two categories now:
+#
+# confirmed_corrections: patients where mechanical, factual re-checking
+#   against the raw note text (NOT reinterpretation) conclusively
+#   contradicts the pipeline's automated label. Applied as a real
+#   correction -- bvf_stage/hvd_stage/confidence_tier all updated.
+#
+# physician_confirmed_overrides: patients where physician sign-off
+#   confirmed the pipeline over-called the event -- the physician's own
+#   determination is applied as the final value (not just a confidence
+#   downgrade; bvf_stage itself changes). Distinct from
+#   confirmed_corrections only in provenance: confirmed_corrections came
+#   from our own raw-text re-check, physician_confirmed_overrides came
+#   from the physician's independent adjudication confirmed via sign-off.
+
+confirmed_corrections:
+  Patient_077:
+    reason: >
+      Raw-text mechanical check confirms this is a false positive, not a
+      genuine reintervention. "aortic valve stenosis s/p TAVR" appears only
+      inside a coded past-medical-history list, during a Progress Note
+      whose entire narrative content is a 1-month post-AV-node-ablation
+      pacemaker follow-up (chief complaint: "1 Month Follow Up Post 2
+      Month AV Node Ablation With MDT"). No narrative or hemodynamic
+      evidence anywhere in the note supports a new valve event; the index
+      implant (2014 minimally-invasive SAVR) already accounts for the "s/p
+      TAVR"-adjacent history entries. Physician full-cohort adjudication
+      independently agreed (BVF_stage=0). See review/error_catalogue.md.
+    new_bvf_stage: 0
+    new_hvd_stage: 0
+    new_phenotype: ""
+    new_confidence_tier: censored
+    rationale_note: >
+      MANUAL CORRECTION (2026-09-17): original automated label was BVF
+      Stage 2 (ViV re-intervention) via a bare coded-history-list "s/p
+      TAVR" mention with no narrative support -- confirmed a false
+      positive on raw-text re-check and by independent physician
+      adjudication. See review/error_catalogue.md and
+      reports/head_a_validation_report.md.
+
+physician_confirmed_overrides:
+  Patient_081:
+    reason: >
+      Physician sign-off (2026-09-17) CONFIRMED the physician's original
+      full-cohort adjudication read, not the pipeline's: this is a genuine
+      pipeline over-call, not an unresolved disagreement. Pipeline evidence
+      was SAVR (Perimount, 2012) -> a bare "underwent TAVR procedure"
+      mention (~2025) with NO corroborating structural/hemodynamic
+      indication documented in the available note (the note is a
+      reassurance post-procedure follow-up, not the procedure's own
+      indication workup) -- `extract_implicit_new_tavr` asserted a
+      confirmed (definite-tier) BVF Stage 2 reintervention from a bare
+      procedure mention alone, with no requirement for a corroborating
+      finding, which is exactly what happened here. Physician's own
+      determination stands: HVD_stage=2, SVD_present=Y (signal genuinely
+      present, matching the pipeline's own hvd_stage=2) but NOT a confirmed
+      BVF Stage 2 reintervention -- scored as VARC-3 "possible" tier.
+    new_bvf_stage: 0
+    new_confidence_tier: possible
+    # hvd_stage and phenotype are NOT overridden -- the physician's own
+    # HVD_stage=2/SVD_present=Y independently matches what the pipeline
+    # already computed from the same gradient/AR evidence, so no change is
+    # needed there; only the BVF/reintervention-confirmation call itself
+    # was the over-call.
+    rationale_note: >
+      PHYSICIAN-CONFIRMED OVERRIDE (2026-09-17, sign-off received): original
+      automated label was BVF Stage 2 (ViV re-intervention) via a bare
+      post-SAVR "underwent TAVR" mention with no corroborating structural
+      indication in the available note. Physician adjudication confirmed
+      via sign-off: HVD_stage=2/SVD_present=Y stands (matches pipeline's own
+      gradient/AR-based staging), but this does not rise to a confirmed
+      reintervention -- rescored as VARC-3 "possible" tier, bvf_stage=0.
+      See review/error_catalogue.md and reports/head_a_validation_report.md.
+    known_extractor_gap: >
+      KNOWN BUG, NOT YET FIXED (2026-09-17): extract_implicit_new_tavr
+      (extract_core.py) fires on any bare "s/p TAVR"/"underwent TAVR"
+      mention for a patient with a positively-known SAVR index approach,
+      with NO requirement for a corroborating structural/hemodynamic
+      finding (gradient rise, new/worsened AR, morphological change)
+      documented near the mention before asserting a definite-tier
+      confirmed reintervention. This is distinct from the already-fixed
+      "bare history list" pattern (finding 3.2/Patient_104, Patient_077):
+      081's mention is a genuine, temporally plausible post-SAVR TAVR
+      procedure narrative (not a restated index event, not an unrelated-
+      visit history entry) -- the gap is specifically the missing
+      corroborating-indication check. A general fix was not attempted in
+      this pass (time constraints, and the project's own prior experience
+      -- see finding for Patient_034/the "unrelated visit" heuristic
+      attempt -- of a plausible-looking general fix breaking a confirmed
+      true positive on corpus-wide testing) rather than risk a rushed,
+      under-tested change this close to submission. Recommended next step:
+      require extract_implicit_new_tavr hits to co-occur (within the same
+      note, or a bounded character window) with a stenosis/regurgitation/
+      gradient finding before assigning definite-tier confidence; downgrade
+      to "possible" otherwise. Flagged here as the concrete, scoped
+      specification for that fix.

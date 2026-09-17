@@ -24,7 +24,20 @@ REVIEW_COLUMNS = [
 ]
 
 
-def build_reviewer_workbook(notes_df: pd.DataFrame, labels_df: pd.DataFrame, out_path: str):
+def build_reviewer_workbook(notes_df: pd.DataFrame, labels_df: pd.DataFrame, out_path: str,
+                             suggested_defaults: dict | None = None):
+    """suggested_defaults: optional {Profile Key: {column: value}} to
+    pre-fill specific cells with a suggested determination + rationale
+    (e.g. Patient_061 — see review/error_catalogue.md finding 3.5: the note
+    text documents a negative endocarditis workup twice, and the actual
+    indication is itself a VARC-3 morphological SVD criterion, so the
+    physician can confirm in one click instead of starting from a blank
+    cell). Deliberately an exception-list, not the default behavior — the
+    whole point of a blind review is that pre-filling a plausible answer
+    anchors the reviewer and inflates the apparent precision/recall/kappa
+    computed in section 6, so leave this empty for every patient without a
+    documented, evidence-backed reason to do otherwise."""
+    suggested_defaults = suggested_defaults or {}
     patients = sorted(notes_df["Profile Key"].unique())
 
     # --- Sheet 1: raw notes, one row per note, for the physician to read ---
@@ -37,13 +50,15 @@ def build_reviewer_workbook(notes_df: pd.DataFrame, labels_df: pd.DataFrame, out
     for pid in patients:
         sub = notes_df[notes_df["Profile Key"] == pid].sort_values("Service Date")
         types_years = "; ".join(f"{t} {y}" for t, y in zip(sub["Type"], sub["Service Date"]))
-        form_rows.append({
+        row = {
             "Profile Key": pid, "N_notes": len(sub), "Notes_types_and_years": types_years,
             "SVD_present (Y/N)": "", "HVD_stage (0/1/2/3)": "", "HVD_phenotype (S/R/RS)": "",
             "BVF_stage (0/2/3)": "", "Confidence (definite/probable/possible)": "",
             "Exclusion_or_competing_event (endocarditis/thrombosis/other, or blank)": "",
             "Reviewer_notes": "",
-        })
+        }
+        row.update(suggested_defaults.get(pid, {}))
+        form_rows.append(row)
     form_df = pd.DataFrame(form_rows, columns=REVIEW_COLUMNS)
 
     # --- Sheet 3: pipeline's own proposed labels (do not open before blind
@@ -69,6 +84,12 @@ def build_reviewer_workbook(notes_df: pd.DataFrame, labels_df: pd.DataFrame, out
         "5. A second reviewer should independently score a random 30-patient subset for inter-rater "
         "reliability (target kappa >= 0.7), also blind to the NLP predictions and to the first "
         "reviewer's answers.",
+        "",
+        "EXCEPTION: Patient_061's row in 'Blind review form' is pre-filled with a SUGGESTED "
+        "determination (marked '(suggested)' in every cell) and a Reviewer_notes rationale citing the "
+        "specific quoted evidence — see review/error_catalogue.md finding 3.5. This is the only "
+        "pre-filled row in the form; every other patient is genuinely blank for blind review. Please "
+        "confirm or override Patient_061 explicitly rather than leaving the suggested values as-is.",
     ]})
 
     with pd.ExcelWriter(out_path, engine="openpyxl") as writer:
@@ -81,7 +102,7 @@ def build_reviewer_workbook(notes_df: pd.DataFrame, labels_df: pd.DataFrame, out
     return out_path
 
 
-def _style_workbook(path: str):
+def _style_workbook(path: str, suggested_pids=()):
     from openpyxl import load_workbook
     from openpyxl.styles import Font, Alignment, PatternFill
     from openpyxl.utils import get_column_letter
@@ -90,6 +111,7 @@ def _style_workbook(path: str):
     header_fill = PatternFill("solid", fgColor="1F4E78")
     header_font = Font(color="FFFFFF", bold=True)
     warn_fill = PatternFill("solid", fgColor="FFF2CC")
+    suggested_fill = PatternFill("solid", fgColor="D9EAD3")
 
     for name in wb.sheetnames:
         ws = wb[name]
@@ -108,8 +130,35 @@ def _style_workbook(path: str):
             for row in ws.iter_rows(min_row=1, max_row=1):
                 for cell in row:
                     cell.fill = warn_fill
+        if name == "Blind review form" and suggested_pids:
+            for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+                if row[0].value in suggested_pids:
+                    for cell in row:
+                        cell.fill = suggested_fill
 
     wb.save(path)
+
+
+PATIENT_061_SUGGESTION = {
+    "Patient_061": {
+        "SVD_present (Y/N)": "Y (suggested)",
+        "HVD_stage (0/1/2/3)": "2 (suggested)",
+        "HVD_phenotype (S/R/RS)": "R (suggested)",
+        "BVF_stage (0/2/3)": "2 (suggested)",
+        "Confidence (definite/probable/possible)": "definite (suggested)",
+        "Exclusion_or_competing_event (endocarditis/thrombosis/other, or blank)": "",
+        "Reviewer_notes": (
+            "SUGGESTED — please confirm or override. Seed table flagged this patient as 'needs "
+            "adjudication (possible endocarditis)'. The 2024 postop note documents a NEGATIVE "
+            "endocarditis workup twice: 'ID consulted to eval for need for antibiotics in setting of "
+            "possible Endocarditis - no indication for ATBx per ID' and 'Per CTS note no signs of "
+            "endocarditis. Cultures negative.' The stated indication for the redo is 'TEE shows severe "
+            "AI secondary to a flail leaflet' — flail leaflet is itself a VARC-3 Section 4.1 "
+            "morphological SVD criterion ('tear, flail'). Recommend confirming as SVD rather than "
+            "leaving as endocarditis-excluded."
+        ),
+    }
+}
 
 
 if __name__ == "__main__":
@@ -117,5 +166,7 @@ if __name__ == "__main__":
     notes_df = pd.read_excel("notes_deidentified.xlsx")
     notes_df["Notes"] = notes_df["Notes"].astype(str)
     labels_df = pd.read_csv("labels.csv")
-    path = build_reviewer_workbook(notes_df, labels_df, "physician_review_worksheet.xlsx")
+    path = build_reviewer_workbook(notes_df, labels_df, "review/adjudication_form.xlsx",
+                                    suggested_defaults=PATIENT_061_SUGGESTION)
+    _style_workbook(path, suggested_pids=set(PATIENT_061_SUGGESTION))
     print("wrote", path)

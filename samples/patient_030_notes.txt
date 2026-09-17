@@ -1,0 +1,13 @@
+PROFILE KEY: Patient_030
+TYPE: Operative Report
+SERVICE DATE: 2011
+NOTES:
+Aortic valve replacement was performed using a 27 mm Trifecta bioprosthetic valve via a surgical approach.
+
+--- NOTE ---
+
+PROFILE KEY: Patient_030
+TYPE: Progress Notes
+SERVICE DATE: 2024
+NOTES:
+The right atrial cavity is moderately dilated. Trifecta prosthetic aortic valve (size #27). Signs of prosthetic valve dysfunction are present. Acceleration time is elevated at approximately 121 msec. Aortic valve peak velocity is 3.39 m/s, mean gradient is 22 mmHg, with mild (1+ to 2+) aortic valve regurgitation.

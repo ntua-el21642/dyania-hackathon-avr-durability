@@ -59,8 +59,9 @@ from extract_core import (
     extract_gradients, extract_lvef, extract_ar_grade, extract_redo,
     extract_viv, extract_exclusions, extract_svd_explicit, extract_morphology,
     extract_implicit_new_tavr, extract_gradient_trend, sentence_window,
+    valve_context_at,
 )
-from sectioning import extract_date_tokens
+from sectioning import extract_date_tokens, repair_line_wraps
 from varc3_rules import assign_patient_label
 
 # Exclusion mention must fall within this many characters of the
@@ -90,6 +91,37 @@ def _trigger_near_exclusion(text: str, exclusions: dict, trigger_start=None, tri
                 dist = max(0, max(trigger_start - h["end"], h["start"] - trigger_end, 0))
                 if dist > EXCLUSION_LINK_WINDOW:
                     continue
+            reasons.append(f"{name} ('{sentence_window(text, h['start'], h['end'], 30)}')")
+    return "; ".join(reasons) if reasons else None
+
+
+def _trigger_near_exclusion_same_line(text: str, exclusions: dict, trigger_start: int, trigger_end: int) -> str:
+    """Same as _trigger_near_exclusion, but additionally requires no newline
+    between the trigger and the exclusion mention — i.e. they must sit in
+    the same narrative sentence/line, not merely be nearby entries in a
+    bulleted/tabular coded problem list. Used only for the bare-AVR/TAVR
+    exclusion check below (see finding 3.2 in review/error_catalogue.md):
+    an early version fired on Patient_034, whose "Aortic Valve Replacement"
+    and an unrelated "Acute Deep Vein Thrombosis" are two separate,
+    unconnected lines in the same coded problem list (146 chars apart, no
+    causal link) — unlike Patient_104's single HPI sentence "presenting for
+    TAVR +/- paravalvular leak repair", which has no newline between the
+    two terms. The redo/ViV/SVD-explicit exclusion checks don't need this
+    extra guard because their own narrative-keyword requirement already
+    anchors the proximity heuristic to a real clinical statement; a bare
+    AVR/TAVR mention has no such anchor and needs the stricter same-line
+    requirement instead."""
+    if not exclusions:
+        return None
+    reasons = []
+    for name, hits in exclusions.items():
+        for h in hits:
+            dist = max(0, max(trigger_start - h["end"], h["start"] - trigger_end, 0))
+            if dist > EXCLUSION_LINK_WINDOW:
+                continue
+            lo, hi = sorted((trigger_start, h["start"]))
+            if "\n" in text[lo:hi]:
+                continue
             reasons.append(f"{name} ('{sentence_window(text, h['start'], h['end'], 30)}')")
     return "; ".join(reasons) if reasons else None
 
@@ -168,9 +200,45 @@ def _redacted_date_after_cabg_history(text: str, hit: dict, window_before: int =
     return bool(CABG_HISTORY_PATTERN.search(head))
 
 
+AORTIC_SELF_EVIDENT = re.compile(r"aortic|\bAVR\b|\bAV\b|\bTAVR\b", re.IGNORECASE)
+
+
+def _wrong_valve_context(text: str, hit: dict) -> bool:
+    """True if a redo/ViV narrative hit's own matched text carries no
+    aortic-specific keyword AND the nearest valve-identity context (before
+    or after, whichever is closer — see extract_core.valve_context_at)
+    is a DIFFERENT valve (mitral/tricuspid/pulmonic). REDO_NARRATIVE's
+    generic alternatives ("redo"+"sternotomy"/"re-operation") match on
+    the surgical *approach*, not on which valve was actually operated on
+    — confirmed on Patient_071: "Redo median sternotomy, mitral valve
+    replacement with 27-mm Biocor bioprosthesis..." matches REDO_NARRATIVE
+    via the generic "sternotomy" alternative while explicitly describing a
+    MITRAL valve procedure. Checked empirically against Patient_017 (whose
+    own genuinely-aortic redo/BioBentall assessment appears twice in one
+    note, once with a mitral-regurgitation mention closer than any aortic
+    one, once with an aortic-regurgitation mention closer) before adding
+    this filter, specifically to confirm a per-hit filter — not a
+    per-note one — correctly keeps 017's aortic-context occurrence while
+    only dropping the ambiguous one. See review/error_catalogue.md."""
+    if hit.get("start") is None:
+        return False
+    matched = hit.get("matched_text") or ""
+    if AORTIC_SELF_EVIDENT.search(matched):
+        return False
+    return valve_context_at(text, hit["start"], hit["end"]) == "other"
+
+
 def run_pipeline(notes_path: str):
     df = pd.read_excel(notes_path)
-    df["Notes"] = df["Notes"].astype(str)
+    # Repair mid-phrase line wraps from the source text conversion BEFORE
+    # any extraction — every extractor below (implant-event detection,
+    # redo/ViV, gradients, AR grade, SVD-explicit-text) matches literal-
+    # space phrases and silently misses a match split across a newline
+    # (see review/error_catalogue.md, finding 3.1). Applied once here so
+    # every downstream consumer (build_patient_timelines and this
+    # function's own note loop) sees the same repaired text and character
+    # offsets stay self-consistent.
+    df["Notes"] = df["Notes"].astype(str).apply(repair_line_wraps)
     timelines = build_patient_timelines(df)
 
     patient_records = []
@@ -187,7 +255,9 @@ def run_pipeline(notes_path: str):
         ev = dict(
             has_exclusion=False, exclusion_reason=None,
             has_redo=False, redo_is_viv=False, redo_note_year=None, redo_evidence=None,
+            has_any_reintervention=False, any_reintervention_evidence=None, any_reintervention_note_year=None,
             has_svd_explicit_text=False, svd_explicit_evidence=None, svd_explicit_year=None,
+            has_svd_history_list_only=False, svd_history_list_evidence=None,
             followup_gradients=[], baseline_gradient=None,
             max_ar_ordinal=None, ar_evidence=None,
             has_morphology_only=False, morphology_evidence=None,
@@ -222,11 +292,13 @@ def run_pipeline(notes_path: str):
             redo_hits = [h for h in redo_hits if not _restates_undated_index(text, h, tl["index_implant_source"])
                          and not _restates_known_index_year(text, h, index_year)
                          and not _restates_index_note_text(text, h, index_note_texts)
-                         and not _redacted_date_after_cabg_history(text, h)]
+                         and not _redacted_date_after_cabg_history(text, h)
+                         and not _wrong_valve_context(text, h)]
             viv_hits = [h for h in viv_hits if not _restates_undated_index(text, h, tl["index_implant_source"])
                         and not _restates_known_index_year(text, h, index_year)
                         and not _restates_index_note_text(text, h, index_note_texts)
-                        and not _redacted_date_after_cabg_history(text, h)]
+                        and not _redacted_date_after_cabg_history(text, h)
+                        and not _wrong_valve_context(text, h)]
             if is_post and tl["index_approach"] == "SAVR":
                 # A bare "s/p TAVR" / "had TAVR" mention with no explicit
                 # 'valve-in-valve' wording (observed in this corpus) is
@@ -245,6 +317,15 @@ def run_pipeline(notes_path: str):
             grad_hits = extract_gradients(text)
             grad_trend_hits = extract_gradient_trend(text)
             ar_hits = extract_ar_grade(text)
+            # An AR-grade mention restating the patient's own index
+            # indication (e.g. "AVR for severe AI (09/2011)" naming that
+            # patient's own index year) is history, not a new post-implant
+            # finding — same restates-index guard already applied to
+            # redo/ViV hits above, now also applied to AR grade (see
+            # review/error_catalogue.md, finding 3.4: this exact pattern
+            # inflated Patient_030's HVD stage from 2 to 3).
+            ar_hits = [h for h in ar_hits if not _restates_known_index_year(text, h, index_year)
+                       and not _restates_index_note_text(text, h, index_note_texts)]
 
             if (redo_hits or viv_hits) and is_post:
                 # A redo/ViV mention in a note strictly after the index
@@ -252,6 +333,25 @@ def run_pipeline(notes_path: str):
                 # redo-*approach* sternotomy for the index operation, or ViV
                 # boilerplate, would otherwise co-fire on that same note).
                 _rv_hit = (redo_hits or viv_hits)[0]
+                # A genuine redo/ViV narrative hit means an actual aortic
+                # valve reintervention procedure is described in the notes,
+                # REGARDLESS of whether it turns out to be SVD- or
+                # non-SVD-attributed below (Master Prompt discussion,
+                # 2026-09-17: physician full-cohort adjudication raised the
+                # possibility that some BVF_stage disagreements reflect
+                # "any reintervention occurred" (this field) vs. "an
+                # SVD-specific reintervention occurred" (has_redo /
+                # bvf_stage==2 below) being two different questions, not
+                # pipeline errors — Patient_103's redo-AVR-for-endocarditis
+                # is the clearest example: an aortic valve WAS replaced
+                # again, but not for a structural reason).
+                if not ev["has_any_reintervention"]:
+                    ev["has_any_reintervention"] = True
+                    ev["any_reintervention_note_year"] = note_year
+                    _any_snip = _rv_hit.get("matched_text") or _rv_hit.get("value") or ""
+                    if _rv_hit.get("start") is not None:
+                        _any_snip = sentence_window(text, _rv_hit["start"], _rv_hit["end"])
+                    ev["any_reintervention_evidence"] = f"[{row['Type']} {note_year}] {_any_snip}"
                 exclusion_reason = _trigger_near_exclusion(
                     text, exclusions, _rv_hit.get("start"), _rv_hit.get("end"))
                 if exclusion_reason:
@@ -268,8 +368,18 @@ def run_pipeline(notes_path: str):
                         snippet = sentence_window(text, hit["start"], hit["end"])
                     ev["redo_evidence"] = f"[{row['Type']} {note_year}] {snippet}"
 
-            if svd_hits and is_post:
-                _svd_hit = svd_hits[0]
+            # A bare coded problem-list phrase ("Prosthetic aortic valve
+            # failure" on its own Diagnosis/Date-table line, with no
+            # narrative elaboration) cannot itself distinguish SVD from
+            # PVL/endocarditis/thrombosis etiology — prefer a narrative hit
+            # if this note has one, and only fall back to a bare-history
+            # hit (routed to the 'possible' tier, never 'definite') when it
+            # doesn't (see review/error_catalogue.md, finding 3.2).
+            svd_narrative_hits = [h for h in svd_hits if not h.get("in_bare_history_list")]
+            svd_bare_hits = [h for h in svd_hits if h.get("in_bare_history_list")]
+
+            if svd_narrative_hits and is_post:
+                _svd_hit = svd_narrative_hits[0]
                 svd_exclusion_reason = _trigger_near_exclusion(
                     text, exclusions, _svd_hit.get("start"), _svd_hit.get("end"))
                 if svd_exclusion_reason:
@@ -279,8 +389,39 @@ def run_pipeline(notes_path: str):
                 else:
                     ev["has_svd_explicit_text"] = True
                     ev["svd_explicit_year"] = note_year if ev["svd_explicit_year"] is None else min(ev["svd_explicit_year"], note_year)
-                    snip = sentence_window(text, svd_hits[0]["start"], svd_hits[0]["end"])
+                    snip = sentence_window(text, _svd_hit["start"], _svd_hit["end"])
                     ev["svd_explicit_evidence"] = f"[{row['Type']} {note_year}] {snip}"
+            elif svd_bare_hits and is_post and not ev["has_svd_history_list_only"]:
+                _bare_hit = svd_bare_hits[0]
+                ev["has_svd_history_list_only"] = True
+                snip = sentence_window(text, _bare_hit["start"], _bare_hit["end"])
+                ev["svd_history_list_evidence"] = f"[{row['Type']} {note_year}] {snip}"
+
+            # A bare AVR/TAVR mention (no redo/ViV keyword) with no redo/ViV
+            # hit of its own can still BE the patient's actual
+            # reintervention when the note explicitly frames it as driven
+            # by a non-structural cause nearby — e.g. "presenting for TAVR
+            # +/- paravalvular leak repair" (Patient_104: the real
+            # procedure the coded-history phrase above was masking). We
+            # don't create a BVF-Stage-2 SVD event from a bare AVR/TAVR
+            # mention alone (too weak on its own), but the exclusion must
+            # still register so this patient is routed to 'excluded'
+            # rather than falling through to a weaker positive SVD signal
+            # (see review/error_catalogue.md, finding 3.2).
+            if is_post and not (redo_hits or viv_hits) and exclusions and not ev["has_exclusion"]:
+                _avr_or_tavr = AVR_PATTERN.search(text) or TAVR_PATTERN.search(text)
+                if _avr_or_tavr:
+                    bare_exclusion_reason = _trigger_near_exclusion_same_line(
+                        text, exclusions, _avr_or_tavr.start(), _avr_or_tavr.end())
+                    if bare_exclusion_reason:
+                        ev["has_exclusion"] = True
+                        ev["exclusion_reason"] = f"AVR/TAVR mention in {note_year} attributed to: {bare_exclusion_reason}"
+                        if not ev["has_any_reintervention"]:
+                            ev["has_any_reintervention"] = True
+                            ev["any_reintervention_note_year"] = note_year
+                            ev["any_reintervention_evidence"] = (
+                                f"[{row['Type']} {note_year}] "
+                                f"{sentence_window(text, _avr_or_tavr.start(), _avr_or_tavr.end())}")
 
             if grad_hits:
                 worst = max(grad_hits, key=lambda g: g["mean"] or 0)
@@ -322,14 +463,37 @@ def run_pipeline(notes_path: str):
             index_implant_source=tl["index_implant_source"],
             index_valve_model=tl["index_valve_model"],
             index_valve_size_mm=tl["index_valve_size_mm"],
+            index_approach=tl["index_approach"],
             n_implant_events=len(tl["events"]),
             last_note_year=last_note_year,
             years_followup=(last_note_year - index_year) if index_year is not None else None,
             hvd_stage=label["hvd_stage"],
             bvf_stage=label["bvf_stage"],
+            # Two deliberately separate columns, not one (2026-09-17 team
+            # discussion, prompted by full-cohort physician adjudication
+            # disagreements that turned out to be a definitional question,
+            # not a pipeline error -- see review/error_catalogue.md):
+            #   any_AV_reintervention: a redo/ViV/AVR-TAVR-reintervention
+            #     narrative was found post-implant, REGARDLESS of cause
+            #     (includes endocarditis/PVL/thrombosis-attributed events).
+            #   SVD_specific_BVF: bvf_stage==2, i.e. an aortic valve
+            #     reintervention attributed specifically to a STRUCTURAL
+            #     (non-excluded) cause -- the Master Prompt's own primary
+            #     endpoint definition. Every excluded/competing-event
+            #     patient has any_AV_reintervention=True (a reintervention
+            #     happened) but SVD_specific_BVF=False (not for SVD)
+            #     whenever the underlying trigger was itself a genuine
+            #     redo/ViV/AVR-TAVR narrative, not just a bare exclusion
+            #     mention with no procedure evidence at all.
+            any_AV_reintervention=bool(ev["has_any_reintervention"]),
+            SVD_specific_BVF=bool(label["bvf_stage"] == 2),
+            any_reintervention_note_year=ev["any_reintervention_note_year"],
+            any_reintervention_evidence=ev["any_reintervention_evidence"],
             phenotype=label["phenotype"],
             confidence_tier=label["confidence_tier"],
             rationale=" | ".join(label["rationale"]),
+            redo_note_year=ev["redo_note_year"],
+            svd_explicit_year=ev["svd_explicit_year"],
             redo_evidence=ev["redo_evidence"],
             svd_explicit_evidence=ev["svd_explicit_evidence"],
             exclusion_reason=ev["exclusion_reason"],
@@ -342,8 +506,55 @@ def run_pipeline(notes_path: str):
         ))
 
     labels_df = pd.DataFrame(patient_records).sort_values("profile_key").reset_index(drop=True)
+    labels_df = apply_label_overrides(labels_df)
     notes_audit_df = pd.DataFrame(note_level_rows)
     return labels_df, notes_audit_df
+
+
+def apply_label_overrides(labels_df: pd.DataFrame, overrides_path: str = "config/label_overrides.yaml") -> pd.DataFrame:
+    """Apply the manual overrides documented in config/label_overrides.yaml
+    — see that file's header for the full rationale and the distinction
+    between categories:
+      confirmed_corrections: our own raw-text re-check conclusively
+        contradicted the pipeline's automated label.
+      physician_confirmed_overrides: physician sign-off confirmed the
+        pipeline over-called the event; the physician's own determination
+        is applied as final.
+    Adds `pending_physician_reconfirmation` (bool, all False as of the
+    2026-09-17 sign-off — kept as a column rather than removed so a prior
+    labels.csv snapshot and the current one stay schema-compatible) and
+    `physician_confirmed_override_note` (why, for the one patient where
+    the physician's value replaced the pipeline's)."""
+    import yaml
+
+    labels_df = labels_df.copy()
+    labels_df["pending_physician_reconfirmation"] = False
+    labels_df["pending_reconfirmation_note"] = None
+    labels_df["physician_confirmed_override_note"] = None
+
+    with open(overrides_path, encoding="utf-8") as f:
+        overrides = yaml.safe_load(f)
+
+    for pid, spec in (overrides.get("confirmed_corrections") or {}).items():
+        mask = labels_df["profile_key"] == pid
+        if not mask.any():
+            continue
+        labels_df.loc[mask, "bvf_stage"] = spec["new_bvf_stage"]
+        labels_df.loc[mask, "hvd_stage"] = spec["new_hvd_stage"]
+        labels_df.loc[mask, "phenotype"] = spec["new_phenotype"]
+        labels_df.loc[mask, "confidence_tier"] = spec["new_confidence_tier"]
+        labels_df.loc[mask, "rationale"] = labels_df.loc[mask, "rationale"] + " | " + spec["rationale_note"].strip()
+
+    for pid, spec in (overrides.get("physician_confirmed_overrides") or {}).items():
+        mask = labels_df["profile_key"] == pid
+        if not mask.any():
+            continue
+        labels_df.loc[mask, "bvf_stage"] = spec["new_bvf_stage"]
+        labels_df.loc[mask, "confidence_tier"] = spec["new_confidence_tier"]
+        labels_df.loc[mask, "physician_confirmed_override_note"] = spec["reason"].strip()
+        labels_df.loc[mask, "rationale"] = labels_df.loc[mask, "rationale"] + " | " + spec["rationale_note"].strip()
+
+    return labels_df
 
 
 if __name__ == "__main__":

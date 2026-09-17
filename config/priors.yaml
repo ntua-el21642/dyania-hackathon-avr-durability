@@ -1,0 +1,138 @@
+generated_by: src/models/durability/fit_literature_priors.py
+method: Least-squares fit of log(-log S(t)) vs log(t) (Master Prompt Section 6.2); single-point families
+  borrow shape k from their approach-level population fit.
+weibull_parameterization: S(t) = exp(-(t/scale_lambda_years)^shape_k), t in years since index implant
+cv_note: Default CV 40% for multi-point fits (Section 6.2 default where published CIs are absent); 64%
+  for single-point families (shape borrowed, only one observed point).
+trifecta_note: 'No Trifecta-specific durability point found in any of the 3 provided source PDFs (full-text
+  search, 2026-09-17: zero matches for ''Trifecta'' in ehaa799.pdf, ejcts_52_3_408.pdf, JAH3-14-e041505.pdf).
+  Trifecta valves in this cohort account for 3 of 8 seed-table SVD-signal patients (Patient_017, 030,
+  058 — see review/error_catalogue.md), a known clinical early-SVD signal, but it is NOT encoded numerically
+  here — Trifecta is assigned the savr_general_population prior only, with this note attached so a physician
+  can manually flag Trifecta patients for closer surveillance pending a sourced Trifecta-specific durability
+  estimate. TODO: source required.'
+approach_level:
+  SAVR:
+    shape_k: 1.3989001189112638
+    scale_lambda_years: 43.841358519784926
+    cv: 0.4
+    citation: 'Pooled: David 2010 (20y) + Mohammadi 2012 (10/15y) + Bourguignon 2015 (15/20y) + Senage
+      2014 (5y), Table 1 (Capodanno 2017)'
+    verified_against: ejcts_52_3_408.pdf p.4 Table 1
+    n_pooled: 4939
+  TAVR:
+    shape_k: 3.32798109968122
+    scale_lambda_years: 19.91955954670536
+    cv: 0.4
+    citation: 'Pooled: Pibarot 2020 + Mack 2023 (5y, balloon-expandable) and Alaour 2025 + Sathananthan
+      2021 (10y, mixed balloon/self-expanding), Table (Trimaille 2025)'
+    verified_against: JAH3-14-e041505.pdf p.4 table rows 'Pibarot et al 2020', 'Mack et al 2023', 'Alaour
+      et al 2025', 'Sathananthan et al 2021'
+    n_pooled: 4798
+valve_family_level:
+  freestyle_savr_stentless:
+    approach: SAVR
+    shape_k: 3.792034097681512
+    scale_lambda_years: 23.0905778733541
+    cv: 0.4
+    citation: Mohammadi et al. 2012, Table 1 (Capodanno 2017)
+    verified_against: ejcts_52_3_408.pdf p.4 Table 1, row 2
+    n: 430
+    points:
+    - - 10
+      - 95.9
+      - Freedom from reoperation for SVD
+    - - 15
+      - 82.3
+      - Freedom from reoperation for SVD
+  carpentier_edwards_savr_pericardial:
+    approach: SAVR
+    shape_k: 3.8491013968271526
+    scale_lambda_years: 21.834442756613573
+    cv: 0.4
+    citation: Bourguignon et al. 2015 (primary, SVD-specific) + Forcillo et al. 2013 + Johnstone et al.
+      2015 (corroborating), Table 1 (Capodanno 2017)
+    verified_against: ejcts_52_3_408.pdf p.4 Table 1, rows 3/5/6
+    n: 2758
+    points:
+    - - 15
+      - 79
+      - 'Bourguignon: freedom from SVD (severe AS/AR definition)'
+    - - 20
+      - 49
+      - 'Bourguignon: freedom from SVD'
+  hancock_ii_savr_porcine:
+    approach: SAVR
+    shape_k: 1.3989001189112638
+    scale_lambda_years: 34.73249271261169
+    cv: 0.6400000000000001
+    shape_k_note: borrowed from SAVR-general population fit (single-point family)
+    citation: David et al. 2010, Table 1 (Capodanno 2017)
+    verified_against: ejcts_52_3_408.pdf p.4 Table 1, row 1
+    n: 1134
+    points:
+    - - 20
+      - 63
+      - Freedom from SVD (undefined criterion in source)
+  mitroflow_savr_pericardial_rapid:
+    approach: SAVR
+    shape_k: 1.3989001189112638
+    scale_lambda_years: 29.528407717273687
+    cv: 0.6400000000000001
+    shape_k_note: borrowed from SAVR-general population fit (single-point family)
+    citation: Senage et al. 2014, Table 1 (Capodanno 2017) — known accelerated-SVD outlier family, kept
+      separate from the general CE/pericardial prior rather than pooled
+    verified_against: ejcts_52_3_408.pdf p.4 Table 1, row 4
+    n: 617
+    points:
+    - - 5
+      - 92
+      - Freedom from SVD (Capodanno absolute-threshold definition)
+  sapien_family_tavr_balloon:
+    approach: TAVR
+    shape_k: 3.32798109968122
+    scale_lambda_years: 19.91955954670538
+    cv: 0.6400000000000001
+    shape_k_note: borrowed from TAVR-general population fit (single-point family)
+    citation: Pibarot et al. 2020 (Sapien XT + Sapien 3) + Mack et al. 2023 (low-risk Sapien 3) + Mack
+      et al. 2015, Table (Trimaille 2025) & Table 2 (Capodanno 2017)
+    verified_against: JAH3-14-e041505.pdf p.4 table rows 'Pibarot et al 2020', 'Mack et al 2023'; ejcts_52_3_408.pdf
+      p.4 Table 2 row 'Mack et al. 2015'
+    n: 2508
+    points:
+    - - 5
+      - 99.0
+      - Pooled mean BVF incidence across Sapien XT/3 cohorts (VARC-3/EAPCI)
+  corevalve_evolut_tavr_self_expanding:
+    approach: TAVR
+    shape_k: 3.32798109968122
+    scale_lambda_years: 17.993149268757122
+    cv: 0.6400000000000001
+    shape_k_note: borrowed from TAVR-general population fit (single-point family)
+    citation: Barbanti et al. 2015, Table 2 (Capodanno 2017)
+    verified_against: ejcts_52_3_408.pdf p.4 Table 2, row 3
+    n: 353
+    points:
+    - - 5
+      - 98.6
+      - Freedom from bioprosthetic valve dysfunction (VARC-1)
+valve_model_to_family:
+  Hancock: hancock_ii_savr_porcine
+  Mosaic: hancock_ii_savr_porcine
+  Freestyle: freestyle_savr_stentless
+  Perimount: carpentier_edwards_savr_pericardial
+  Perimount 2700: carpentier_edwards_savr_pericardial
+  Magna: carpentier_edwards_savr_pericardial
+  Magna Ease: carpentier_edwards_savr_pericardial
+  Inspiris: carpentier_edwards_savr_pericardial
+  Inspiris Resilia: carpentier_edwards_savr_pericardial
+  Mitroflow: mitroflow_savr_pericardial_rapid
+  Sapien: sapien_family_tavr_balloon
+  Sapien XT: sapien_family_tavr_balloon
+  Sapien S3: sapien_family_tavr_balloon
+  Sapien 3: sapien_family_tavr_balloon
+  Evolut: corevalve_evolut_tavr_self_expanding
+  Evolut R: corevalve_evolut_tavr_self_expanding
+  Evolut PRO: corevalve_evolut_tavr_self_expanding
+  Evolut FX: corevalve_evolut_tavr_self_expanding
+  CoreValve: corevalve_evolut_tavr_self_expanding

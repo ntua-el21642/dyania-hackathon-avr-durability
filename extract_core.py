@@ -63,12 +63,19 @@ LVEF_PATTERN = re.compile(
     re.IGNORECASE,
 )
 AR_GRADE_PATTERN = re.compile(
-    r"(?P<grade>trace|mild(?:-to-moderate)?|moderate(?:-to-severe)?|severe)\s*"
+    # 'svr' (dictation shorthand for "severe", observed in this corpus:
+    # "Echocardiogram reveals svr AI") is included in the grade alternation
+    # itself, not as a separate lexicon — it only fires when immediately
+    # followed by an AR/AI/regurgitation/leak token, so it can't collide
+    # with the far more common cardiology usage of "SVR" = systemic
+    # vascular resistance (always followed by a number/units, never by
+    # AR/AI/regurgitation/leak).
+    r"(?P<grade>trace|mild(?:-to-moderate)?|moderate(?:-to-severe)?|severe|svr)\s*"
     r"(?:para)?(?:valvular)?\s*(?:aortic )?(?:regurgitation|\bAR\b|\bAI\b|leak)",
     re.IGNORECASE,
 )
 AR_GRADE_ORDER = {"none": 0, "trace": 1, "mild": 1, "mild-to-moderate": 2,
-                   "moderate": 2, "moderate-to-severe": 3, "severe": 3}
+                   "moderate": 2, "moderate-to-severe": 3, "severe": 3, "svr": 3}
 
 
 VALVE_IDENTITY = re.compile(
@@ -281,6 +288,48 @@ PMH_FRAME = re.compile(
     r"past (?:medical|surgical) history|\bPMH\b|\bPSH\b", re.IGNORECASE
 )
 
+# Bare all-caps section-header lines ("PAST MEDICAL HISTORY", "ACTIVE
+# PROBLEM LIST", "HISTORY OF PRESENT ILLNESS", ...), with or without a
+# trailing colon and with no other content on the line. Deliberately does
+# NOT match Title-Case sub-headers like "Assessment:" — see
+# _in_bare_history_list_entry below, which relies on that distinction.
+SECTION_HEADER_LINE = re.compile(r"^[ \t]*([A-Z][A-Z0-9 /&]{3,45})\s*:?\s*$", re.MULTILINE)
+HISTORY_LIST_HEADER = re.compile(
+    r"past (?:medical|surgical) history|\bPMH\b|\bPSH\b|active problem list", re.IGNORECASE
+)
+# A bare coded problem-list line ("Prosthetic aortic valve failure" on its
+# own line in a flat "Diagnosis / Date" table) is short and has no
+# narrative elaboration. This is deliberately distinguished from a
+# problem-oriented note where each PMH entry is followed by its own
+# "History: ..." narrative paragraph containing real clinical detail
+# (observed in this corpus: Patient_017's PAST MEDICAL HISTORY section, where
+# "prosthetic valve dysfunction" sits inside a rich per-problem narrative
+# with echo findings and a redo assessment/plan — that must NOT be
+# downgraded). Only a match that is BOTH under a PMH/PSH/problem-list
+# section header AND sitting alone on a short, unelaborated line is treated
+# as nonspecific coded history (see review/error_catalogue.md, finding 3.2:
+# Patient_104 carries the identical phrase "Prosthetic aortic valve
+# failure" as Patient_068, verbatim, as a bare ICD-style problem-list
+# entry with no narrative attached and no way to tell SVD from PVL/
+# endocarditis/thrombosis etiology from the phrase alone).
+NARRATIVE_ELABORATION = re.compile(r"due to|caused by|gradient|echo|assessment|mmhg", re.IGNORECASE)
+
+
+def _in_bare_history_list_entry(text: str, start: int, end: int) -> bool:
+    last_header = None
+    for m in SECTION_HEADER_LINE.finditer(text[:start]):
+        last_header = m.group(1)
+    if not (last_header and HISTORY_LIST_HEADER.search(last_header)):
+        return False
+    line_start = text.rfind("\n", 0, start) + 1
+    line_end = text.find("\n", end)
+    if line_end == -1:
+        line_end = len(text)
+    line = text[line_start:line_end].strip()
+    if len(line) > 60 or NARRATIVE_ELABORATION.search(line):
+        return False
+    return True
+
 
 def extract_redo(text: str):
     hits = _structured_or_narrative(text, ["reoperation"], REDO_NARRATIVE)
@@ -406,7 +455,8 @@ def extract_svd_explicit(text: str):
             ctx = valve_context_at(text, m.start(), m.end())
             if ctx == "other":
                 continue
-        out.append(dict(start=m.start(), end=m.end(), matched_text=m.group()))
+        out.append(dict(start=m.start(), end=m.end(), matched_text=m.group(),
+                         in_bare_history_list=_in_bare_history_list_entry(text, m.start(), m.end())))
     return out
 
 

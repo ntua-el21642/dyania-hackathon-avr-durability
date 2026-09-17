@@ -1,0 +1,7 @@
+n_simulated: 200
+n_reconstructed_events: 84
+n_true_events: 87
+max_abs_deviation: 0.05427930001040704
+pass_threshold_0_10: true
+note: Synthetic self-test only -- see module docstring and DIGITIZATION_CHECKLIST.md;
+  never run against real published data in this build.

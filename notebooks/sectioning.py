@@ -32,6 +32,35 @@ MONTH_TO_NUM = {
 }
 
 
+SOFT_LINE_WRAP = re.compile(r"(?<=[a-z,;])\n[ \t]*(?=[a-z])")
+
+
+def repair_line_wraps(text: str) -> str:
+    """Rejoin words split across a mid-phrase line wrap in the source PDF/
+    text conversion (observed in this corpus: an Operative Report reading
+    "...replacement of the aortic\\nvalve." — a literal newline standing in
+    for a space). Every downstream extractor matches literal-space phrases
+    ("aortic valve replacement", "AVR for severe AI"), so a mid-word/
+    mid-phrase newline silently breaks the match and can make an entire
+    implant event or reintervention invisible to the pipeline (see
+    review/error_catalogue.md, finding 3.1).
+
+    Deliberately narrow: only collapses a newline that sits between a
+    lowercase/comma/semicolon character and a following lowercase letter —
+    this is the signature of a soft wrap, not a real line break. It must
+    NOT collapse the newlines that separate "FIELD: value" template lines
+    or paragraph/section breaks (those are needed by parse_field_lines and
+    are always preceded by a field name ending in ':' or a blank line, or
+    followed by an uppercase section header) — verified empirically against
+    the full 215-note corpus: this rejoin only ever lengthens truncated
+    parse_field_lines values (multi-line narrative fields were previously
+    cut at the first physical line), it never changes a
+    Reoperation/"Valve in Valve"/Tissue-Implant-Type/Implant-Size field
+    value.
+    """
+    return SOFT_LINE_WRAP.sub(" ", text)
+
+
 def parse_field_lines(text: str) -> dict:
     """Return {field_name_lower: value_text} for template-style lines. Later
     duplicate field names overwrite earlier ones (last wins), which is fine
